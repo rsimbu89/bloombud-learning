@@ -102,6 +102,15 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 @keyframes bbViewIn{from{opacity:.3;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:650px){main{padding:16px 12px 52px}.card,.panel,.parentpanel{padding:clamp(14px,4vw,22px);border-radius:21px}.hero{border-radius:22px}.chess-piece-token{width:79%;height:79%;border-width:1.5px}.chess-piece-symbol{font-size:clamp(22px,8vw,41px)}.chess-board{border-width:4px}.chess-stage-tabs button{min-height:48px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.view.active{animation:none}.card,.panel,.activity-tile,.gameicon{transition:none}}
+</style><style id="chess-piece-sizing-fix">
+/* Chessboard cells must not grow to fit their contents on Android. */
+.chess-board{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,1fr))!important;container-type:inline-size}
+.chess-board .chess-square{width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%;max-height:100%;position:relative!important;overflow:hidden!important;display:block!important;padding:0!important;line-height:1!important}
+.chess-board .chess-piece-token{position:absolute!important;inset:12%!important;width:auto!important;height:auto!important;max-width:none!important;max-height:none!important;aspect-ratio:1!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;flex-shrink:1!important;transform:none!important;border-radius:50%!important}
+.chess-board .chess-piece-symbol{display:block!important;flex:none!important;font-size:9.2cqw!important;line-height:1!important;font-weight:400!important;letter-spacing:0!important;width:auto!important;height:auto!important;max-width:100%!important;white-space:nowrap!important;font-stretch:normal!important;transform:none!important}
+@supports not (font-size:1cqw){.chess-board .chess-piece-symbol{font-size:clamp(23px,7vw,43px)!important}}
+.chess-board .chess-target{position:absolute;right:1px;top:1px;z-index:4;font-size:clamp(12px,3vw,18px)}
+@media(max-width:420px){.chess-board .chess-piece-token{inset:14%!important}}
 </style></head><body><header><div class="brand">🌱 Bloom<span>Bud</span></div><div class="topright"><span class="pill">⭐ <span id="xp">0</span> XP</span><button class="btn secondary" id="soundToggle" onclick="toggleSound()">🔊</button></div></header><main><div class="parentbar" id="routineBar"><div><strong>🌿 Calm learning routine</strong><div><small id="routineText">A short learning session, then a real-world break.</small></div></div><button onclick="openParent()">🔒 Parent dashboard</button></div><section class="view active" id="dashboard"><div class="minimal-home">
 <div class="welcome"><div class="welcome-kicker">🌱 BLOOMBUD LEARNING</div><h1>What shall we explore <span>today?</span></h1><p>Pick an adventure. Learn something wonderful.</p></div>
 <div aria-label="Choose a learning activity" class="activity-tiles">
