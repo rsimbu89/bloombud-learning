@@ -156,6 +156,13 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 .tactic-top>span,.arena-top>strong{font-size:clamp(18px,3.7vw,24px)}
 @media(max-width:560px){.chess-coordinate-frame{--coord-gutter:18px;padding:4px;border-radius:13px}.tactic-launch{grid-template-columns:1fr;gap:10px}.tactic-launch button{min-height:72px!important}.chess-coordinate-frame .arena-board,.chess-coordinate-frame .tactic-board,.chess-coordinate-frame .chess-board{border-width:3px}}
 @media(prefers-reduced-motion:reduce){.tactic-launch button{transition:none}}
+</style><style id="chess-coordinate-corners">
+.arena-cell .arena-square-rank,.arena-cell .arena-square-file{position:absolute;z-index:3;font-size:clamp(9px,1.9vw,12px);font-weight:900;line-height:1;pointer-events:none;font-family:system-ui,sans-serif;text-shadow:0 1px 1px #ffffff44}
+.arena-cell .arena-square-rank{top:3px;left:4px}.arena-cell .arena-square-file{bottom:3px;right:4px}
+.arena-cell.arena-light .arena-square-rank,.arena-cell.arena-light .arena-square-file{color:#526d58}.arena-cell.arena-dark .arena-square-rank,.arena-cell.arena-dark .arena-square-file{color:#fff9e7}
+.arena-top{flex-wrap:wrap}.arena-top strong{font-size:clamp(17px,4vw,23px)}
+.tactic-launch button{line-height:1.35;letter-spacing:-.2px}
+@media(max-width:440px){.chess-coordinate-frame{--coord-gutter:16px;padding:4px;border-radius:13px}.chess-coordinate-frame .arena-board{border-width:3px}.arena-cell .arena-square-rank,.arena-cell .arena-square-file{font-size:9px}.arena-cell .arena-square-rank{top:2px;left:2px}.arena-cell .arena-square-file{bottom:2px;right:2px}}
 </style></head><body><header><div class="brand">🌱 Bloom<span>Bud</span></div><div class="topright"><span class="pill">⭐ <span id="xp">0</span> XP</span><button class="btn secondary" id="soundToggle" onclick="toggleSound()">🔊</button></div></header><main><div class="parentbar" id="routineBar"><div><strong>🌿 Calm learning routine</strong><div><small id="routineText">A short learning session, then a real-world break.</small></div></div><button onclick="openParent()">🔒 Parent dashboard</button></div><section class="view active" id="dashboard"><div class="minimal-home">
 <div class="welcome"><div class="welcome-kicker">🌱 BLOOMBUD LEARNING</div><h1>What shall we explore <span>today?</span></h1><p>Pick an adventure. Learn something wonderful.</p></div>
 <div aria-label="Choose a learning activity" class="activity-tiles">
@@ -675,7 +682,7 @@ const canPlay=arenaCanPlay(),legal=canPlay?arenaLegal(arena):[],chosen=arenaSele
 const flipped=arenaMode==='computer'?arenaHuman==='b':arenaFirst==='b';
 const indices=Array.from({length:8},(_,i)=>flipped?7-i:i);
 const cells=indices.map(r=>indices.map(c=>{const p=arena.b[r][c],possible=chosen.some(m=>m.to[0]===r&&m.to[1]===c),selected=arenaSelected&&arenaSelected[0]===r&&arenaSelected[1]===c,last=arena.last&&arena.last.some(v=>v[0]===r&&v[1]===c);
-return '<button type="button" data-arena="'+r+','+c+'" class="arena-cell '+((r+c)%2?'arena-dark':'arena-light')+(possible?' arena-legal':'')+(selected?' arena-selected':'')+(last?' arena-last':'')+'" aria-label="'+(p?(arenaSide(p)==='w'?'White ':'Black ')+p:'Empty')+' '+String.fromCharCode(97+c)+(8-r)+'">'+(p?'<span class="arena-piece '+(arenaSide(p)==='w'?'arena-white':'arena-black')+'">'+arenaGlyph[p]+'</span>':'')+'</button>'}).join('')).join('');
+return '<button type="button" data-arena="'+r+','+c+'" class="arena-cell '+((r+c)%2?'arena-dark':'arena-light')+(possible?' arena-legal':'')+(selected?' arena-selected':'')+(last?' arena-last':'')+'" aria-label="'+(p?(arenaSide(p)==='w'?'White ':'Black ')+p:'Empty')+' '+String.fromCharCode(97+c)+(8-r)+'">'+(p?'<span class="arena-piece '+(arenaSide(p)==='w'?'arena-white':'arena-black')+'">'+arenaGlyph[p]+'</span>':'')+(c===0?'<span class="arena-square-rank" aria-hidden="true">'+(8-r)+'</span>':'')+(r===7?'<span class="arena-square-file" aria-hidden="true">'+String.fromCharCode(97+c)+'</span>':'')+'</button>'}).join('')).join('');
 const check=arenaCheck(arena,arena.turn),sideName=arena.turn==='w'?'WHITE':'BLACK',sideIcon=arena.turn==='w'?'⚪':'⚫',player=arenaMode==='two'?'Player '+(arena.turn===arenaFirst?'1':'2'):arena.turn===arenaHuman?'YOUR TURN':'COMPUTER TURN';
 const status=arena.over?arena.over:(sideIcon+' '+player+' · '+sideName+(check?' · CHECK!':''));
 $('chessApp').innerHTML='<div class="arena-top"><button type="button" id="arenaBack">← Chess Quest</button><strong>♟️ Full Chess Arena</strong></div>'+
