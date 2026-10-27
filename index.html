@@ -369,8 +369,43 @@ cow:'cow-moo-02',pig:'pig-oink-02',sheep:'sheep-bleat-02',horse:'horse-neigh-03'
 dog:'animal-dog-bark-25',cat:'animal-cat-meow-34',lion:'lion-roar-02',wolf:'wolf-howl-02',frog:'animal-frog-14',owl:'animal-owl-01',chicken:'hen-cluck-02'
 };
 let activeAnimalAudio=null,animalSequence=0,animalDelay=null;
+let animalAudioContext=null,animalSynthNodes=[];
+function stopAnimalSynth(){for(const node of animalSynthNodes){try{node.stop()}catch(e){}}animalSynthNodes=[]}
+function playSimulatedAnimal(id,sequence,status){
+if(sequence!==animalSequence)return;
+const AC=window.AudioContext||window.webkitAudioContext;
+if(!AC){if(status)status.textContent='Sound effects are unavailable in this browser.';return}
+try{
+const ctx=animalAudioContext||(animalAudioContext=new AC());
+if(ctx.state==='suspended')ctx.resume();
+const profiles={
+goat:[225,390,'sawtooth',4,.16],turkey:[170,290,'square',6,.09],rabbit:[620,850,'sine',3,.07],
+hamster:[750,1100,'sine',5,.045],parrot:[580,1080,'triangle',4,.11],goldfish:[230,480,'sine',3,.09],
+elephant:[95,270,'sawtooth',3,.38],monkey:[310,720,'triangle',5,.12],snake:[1800,3300,'sawtooth',3,.4],
+bear:[75,165,'sawtooth',3,.28],tiger:[80,220,'sawtooth',4,.2],whale:[80,320,'sine',3,.55],
+dolphin:[1200,2800,'sine',6,.065],seal:[210,520,'sawtooth',4,.14],crab:[900,1700,'square',4,.035],
+octopus:[170,380,'sine',4,.1],eagle:[800,1750,'sawtooth',3,.16],penguin:[340,660,'square',4,.13],
+flamingo:[320,510,'sawtooth',3,.22],crow:[390,680,'sawtooth',4,.16]
+};
+const [low,high,wave,count,duration]=profiles[id]||[300,600,'triangle',3,.14];
+const now=ctx.currentTime+.03;
+for(let i=0;i<count;i++){
+const osc=ctx.createOscillator(),gain=ctx.createGain();
+const start=now+i*(duration+.055),end=start+duration;
+osc.type=wave;
+osc.frequency.setValueAtTime(i%2?high:low,start);
+osc.frequency.exponentialRampToValueAtTime(Math.max(40,i%2?low:high),end);
+gain.gain.setValueAtTime(.0001,start);
+gain.gain.exponentialRampToValueAtTime(wave==='sawtooth'?.065:.12,start+.025);
+gain.gain.exponentialRampToValueAtTime(.0001,end);
+osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(end+.01);animalSynthNodes.push(osc)
+}
+if(status)status.textContent='🎵 Playing a playful simulated '+id+' sound (not a real recording).';
+}catch(e){if(status)status.textContent='Could not play the sound effect. Tap Play again.'}
+}
+
 function stopAnimalAudio(){
-animalSequence++;
+animalSequence++;stopAnimalSynth();
 if(animalDelay!==null){clearTimeout(animalDelay);animalDelay=null}
 if('speechSynthesis'in window)window.speechSynthesis.cancel();
 if(activeAnimalAudio){activeAnimalAudio.pause();activeAnimalAudio.removeAttribute('src');activeAnimalAudio.load();activeAnimalAudio=null}
@@ -392,12 +427,12 @@ const sequence=animalSequence,status=$('animalAudioStatus'),clip=ANIMAL_RECORDIN
 if(!sound){if(status)status.textContent='🔇 Sound is muted. Turn on sound to listen.';return}
 const playRecording=()=>{
 if(sequence!==animalSequence)return;
-if(!clip){if(status)status.textContent='Real animal recording is not yet available.';return}
+if(!clip){playSimulatedAnimal(id,sequence,status);return}
 if(status)status.textContent='🔊 Playing '+a.name.toLowerCase()+' sound…';
 const audio=new Audio('https://sfxmint.com/dl/'+clip+'.mp3');activeAnimalAudio=audio;
 audio.preload='auto';audio.volume=.85;
 audio.onended=()=>{if(sequence===animalSequence&&status)status.textContent='🔊 Tap Play again to repeat.'};
-audio.onerror=()=>{if(sequence===animalSequence&&status)status.textContent='Sound could not load. Check internet and tap Play again.'};
+audio.onerror=()=>{if(sequence===animalSequence){if(status)status.textContent='Recording unavailable. Playing a simulated sound.';playSimulatedAnimal(id,sequence,status)}};
 const play=audio.play();if(play&&play.catch)play.catch(()=>{if(sequence===animalSequence&&status)status.textContent='Tap Play again to enable audio.'});
 };
 const afterName=()=>{if(sequence!==animalSequence)return;if(status)status.textContent='⏳ Listen for the animal sound…';animalDelay=setTimeout(()=>{animalDelay=null;playRecording()},900)};
