@@ -364,31 +364,33 @@ function extraHome(){if('speechSynthesis' in window)speechSynthesis.cancel();$('
 function openExtra(which){extraMode=which;$('dashboard').classList.remove('active');$('game').classList.remove('active');$('extra').classList.add('active');$('extraTitle').textContent=which==='safari'?'Sound Safari':'Knowledge Cards';$('extraIcon').textContent=which==='safari'?'🐾':'🧠';$('extraIntro').textContent=which==='safari'?'Explore one animal at a time. Say its name and sound together.':'Think about the question, reveal the answer, then explain it in your own words.';which==='safari'?renderSafari():renderCardFilters();}
 function renderSafari(){const cats=['All','Farm','Pets','Wild','Ocean','Birds'];$('extraFilters').innerHTML=cats.map(c=>`<button class="btn ${c===animalCategory?'':'secondary'}" onclick="animalCategory='${c}';renderSafari()">${c}</button>`).join('');$('extraBody').innerHTML='<div id="animalInfo" class="learningbox" aria-live="polite"><div class="big">🦊</div><h3>Choose an animal to learn about</h3><p>Listen, repeat, and talk about where it lives.</p></div><div class="animalgrid">'+SAFARI_ANIMALS.filter(a=>animalCategory==='All'||a.category===animalCategory).map(a=>`<button class="animalbtn" onclick="chooseAnimal('${a.id}')"><span class="emoji">${a.emoji}</span>${a.name}</button>`).join('')+'</div>';$('extraFoot').textContent='No points for repeated tapping. Try naming three animals, then take a screen break.'}
 let safariSpeech=null;
+const ANIMAL_RECORDINGS={
+cow:'cow-moo-02',pig:'pig-oink-02',sheep:'sheep-bleat-02',horse:'horse-neigh-03',rooster:'rooster-crow-02',duck:'duck-quack-02',
+dog:'animal-dog-bark-25',cat:'animal-cat-meow-34',lion:'lion-roar-02',wolf:'wolf-howl-02',frog:'animal-frog-14',owl:'animal-owl-01',chicken:'hen-cluck-02'
+};
+let activeAnimalAudio=null;
+function stopAnimalAudio(){if(activeAnimalAudio){activeAnimalAudio.pause();activeAnimalAudio.removeAttribute('src');activeAnimalAudio.load();activeAnimalAudio=null}}
 function chooseAnimal(id){
 const a=SAFARI_ANIMALS.find(x=>x.id===id);if(!a)return;
 safariCount++;
-$('animalInfo').innerHTML=`<div class="big">${a.emoji}</div><h2>${a.name}</h2><p>The ${a.name.toLowerCase()} makes a sound we describe as “${a.sound}”.</p><p class="quiet">Category: ${a.category}. Can you say its name and think of where it lives?</p><p id="animalAudioStatus" class="quiet" role="status" aria-live="polite">🔊 Playing animal sound…</p><button class="btn secondary" onclick="sayAnimal('${a.id}')">🔊 Play sound again</button>`;
-sayAnimal(a.id);
+const hasRecording=!!ANIMAL_RECORDINGS[id];
+$('animalInfo').innerHTML=`<div class="big">${a.emoji}</div><h2>${a.name}</h2><p>The ${a.name.toLowerCase()} makes a sound we describe as “${a.sound}”.</p><p class="quiet">Category: ${a.category}. Can you say its name and think of where it lives?</p><p id="animalAudioStatus" class="quiet" role="status" aria-live="polite">${hasRecording?'🔊 Loading real animal sound…':'A real recording for this animal is coming soon.'}</p>${hasRecording?`<button class="btn secondary" onclick="sayAnimal('${a.id}')">🔊 Play animal sound again</button>`:''}`;
+if(hasRecording)sayAnimal(a.id);else stopAnimalAudio();
 if(safariCount%3===0)$('extraFoot').textContent='🌿 You explored three animals. Great time to pause and talk about them together!';
 const info=$('animalInfo');info.style.scrollMarginTop='18px';
 requestAnimationFrame(()=>info.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}));
 }
 function sayAnimal(id){
-const a=SAFARI_ANIMALS.find(x=>x.id===id);if(!a)return;
+const a=SAFARI_ANIMALS.find(x=>x.id===id),clip=ANIMAL_RECORDINGS[id];if(!a||!clip)return;
 const status=$('animalAudioStatus');
+stopAnimalAudio();
 if(!sound){if(status)status.textContent='🔇 Sound is muted. Turn on sound to listen.';return}
-if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window)){if(status)status.textContent='Audio is not supported in this browser.';return}
-try{
-const synth=window.speechSynthesis;
-synth.cancel();
-const utterance=new SpeechSynthesisUtterance(a.name+'. '+a.sound+'.');
-utterance.lang='en-IN';utterance.rate=.78;utterance.volume=1;
-utterance.onstart=()=>{if(status)status.textContent='🔊 '+a.name+' — '+a.sound};
-utterance.onend=()=>{if(status)status.textContent='🔊 Tap Play sound again to repeat.'};
-utterance.onerror=()=>{if(status)status.textContent='Could not play audio. Tap Play sound again.'};
-synth.speak(utterance);
-if(synth.paused)synth.resume();
-}catch(e){if(status)status.textContent='Could not play audio. Tap Play sound again.'}
+const audio=new Audio('https://sfxmint.com/dl/'+clip+'.mp3');activeAnimalAudio=audio;
+audio.preload='auto';audio.volume=.85;
+audio.onplaying=()=>{if(activeAnimalAudio===audio&&status)status.textContent='🔊 Playing real '+a.name.toLowerCase()+' sound'};
+audio.onended=()=>{if(activeAnimalAudio===audio&&status)status.textContent='🔊 Tap Play animal sound again to repeat.'};
+audio.onerror=()=>{if(activeAnimalAudio===audio&&status)status.textContent='Sound could not load. Check internet and tap Play animal sound again.'};
+const play=audio.play();if(play&&play.catch)play.catch(()=>{if(activeAnimalAudio===audio&&status)status.textContent='Tap Play animal sound again to enable audio.'});
 }
 function renderCardFilters(){let cats=['Animals','Science','Geography','Fun Facts'];$('extraFilters').innerHTML='<div style="width:100%"><div class="controls">'+cats.map(c=>`<button class="btn ${cardCategory===c?'':'secondary'}" onclick="cardCategory='${c}';renderCardFilters()">${c}</button>`).join('')+'</div><div class="controls">'+['Easy','Medium','Hard'].map(t=>`<button class="btn ${cardTier===t?'':'secondary'}" onclick="cardTier='${t}';renderCardFilters()">${t}</button>`).join('')+'</div></div>';cardList=bloomPick(KNOWLEDGE_DECK.filter(c=>c.cat===cardCategory&&c.tier===cardTier),'knowledge:'+cardCategory+':'+cardTier,8,c=>c.q.trim().toLowerCase());cardIndex=0;renderKnowledge()}
 function renderKnowledge(){revealed=false;let c=cardList[cardIndex];if(!c){$('extraBody').innerHTML='<div class="learningbox"><h2>Nice thinking! 🌱</h2><p>You finished this short set. Tell someone one new thing you learned.</p><button class="btn" onclick="extraHome()">Back to activities</button></div>';$('extraFoot').textContent='Learning is more important than scores.';return}$('extraBody').innerHTML=`<p class="badge">Card ${cardIndex+1} of ${cardList.length}</p><button class="flipbutton" id="studyFlip" onclick="flipKnowledge()"><span class="quiet">QUESTION — Think first</span><div style="margin-top:15px">${c.q}</div><p class="quiet">Tap when you are ready to see the answer</p></button><div id="reflectArea"></div>`;$('extraFoot').textContent='Try answering aloud before revealing. It is okay not to know yet.'}
