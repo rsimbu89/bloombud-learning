@@ -368,29 +368,50 @@ const ANIMAL_RECORDINGS={
 cow:'cow-moo-02',pig:'pig-oink-02',sheep:'sheep-bleat-02',horse:'horse-neigh-03',rooster:'rooster-crow-02',duck:'duck-quack-02',
 dog:'animal-dog-bark-25',cat:'animal-cat-meow-34',lion:'lion-roar-02',wolf:'wolf-howl-02',frog:'animal-frog-14',owl:'animal-owl-01',chicken:'hen-cluck-02'
 };
-let activeAnimalAudio=null;
-function stopAnimalAudio(){if(activeAnimalAudio){activeAnimalAudio.pause();activeAnimalAudio.removeAttribute('src');activeAnimalAudio.load();activeAnimalAudio=null}}
+let activeAnimalAudio=null,animalSequence=0,animalDelay=null;
+function stopAnimalAudio(){
+animalSequence++;
+if(animalDelay!==null){clearTimeout(animalDelay);animalDelay=null}
+if('speechSynthesis'in window)window.speechSynthesis.cancel();
+if(activeAnimalAudio){activeAnimalAudio.pause();activeAnimalAudio.removeAttribute('src');activeAnimalAudio.load();activeAnimalAudio=null}
+}
 function chooseAnimal(id){
 const a=SAFARI_ANIMALS.find(x=>x.id===id);if(!a)return;
 safariCount++;
 const hasRecording=!!ANIMAL_RECORDINGS[id];
-$('animalInfo').innerHTML=`<div class="big">${a.emoji}</div><h2>${a.name}</h2><p>The ${a.name.toLowerCase()} makes a sound we describe as “${a.sound}”.</p><p class="quiet">Category: ${a.category}. Can you say its name and think of where it lives?</p><p id="animalAudioStatus" class="quiet" role="status" aria-live="polite">${hasRecording?'🔊 Loading real animal sound…':'A real recording for this animal is coming soon.'}</p>${hasRecording?`<button class="btn secondary" onclick="sayAnimal('${a.id}')">🔊 Play animal sound again</button>`:''}`;
-if(hasRecording)sayAnimal(a.id);else stopAnimalAudio();
+$('animalInfo').innerHTML=`<div class="big">${a.emoji}</div><h2>${a.name}</h2><p>The ${a.name.toLowerCase()} makes a sound we describe as “${a.sound}”.</p><p class="quiet">Category: ${a.category}. Can you say its name and think of where it lives?</p><p id="animalAudioStatus" class="quiet" role="status" aria-live="polite">🔊 Saying ${a.name}…</p><button class="btn secondary" onclick="sayAnimal('${a.id}')">🔊 Play again</button>`;
+sayAnimal(a.id);
 if(safariCount%3===0)$('extraFoot').textContent='🌿 You explored three animals. Great time to pause and talk about them together!';
 const info=$('animalInfo');info.style.scrollMarginTop='18px';
 requestAnimationFrame(()=>info.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}));
 }
 function sayAnimal(id){
-const a=SAFARI_ANIMALS.find(x=>x.id===id),clip=ANIMAL_RECORDINGS[id];if(!a||!clip)return;
-const status=$('animalAudioStatus');
+const a=SAFARI_ANIMALS.find(x=>x.id===id);if(!a)return;
 stopAnimalAudio();
+const sequence=animalSequence,status=$('animalAudioStatus'),clip=ANIMAL_RECORDINGS[id];
 if(!sound){if(status)status.textContent='🔇 Sound is muted. Turn on sound to listen.';return}
+const playRecording=()=>{
+if(sequence!==animalSequence)return;
+if(!clip){if(status)status.textContent='Real animal recording is not yet available.';return}
+if(status)status.textContent='🔊 Playing '+a.name.toLowerCase()+' sound…';
 const audio=new Audio('https://sfxmint.com/dl/'+clip+'.mp3');activeAnimalAudio=audio;
 audio.preload='auto';audio.volume=.85;
-audio.onplaying=()=>{if(activeAnimalAudio===audio&&status)status.textContent='🔊 Playing real '+a.name.toLowerCase()+' sound'};
-audio.onended=()=>{if(activeAnimalAudio===audio&&status)status.textContent='🔊 Tap Play animal sound again to repeat.'};
-audio.onerror=()=>{if(activeAnimalAudio===audio&&status)status.textContent='Sound could not load. Check internet and tap Play animal sound again.'};
-const play=audio.play();if(play&&play.catch)play.catch(()=>{if(activeAnimalAudio===audio&&status)status.textContent='Tap Play animal sound again to enable audio.'});
+audio.onended=()=>{if(sequence===animalSequence&&status)status.textContent='🔊 Tap Play again to repeat.'};
+audio.onerror=()=>{if(sequence===animalSequence&&status)status.textContent='Sound could not load. Check internet and tap Play again.'};
+const play=audio.play();if(play&&play.catch)play.catch(()=>{if(sequence===animalSequence&&status)status.textContent='Tap Play again to enable audio.'});
+};
+const afterName=()=>{if(sequence!==animalSequence)return;if(status)status.textContent='⏳ Listen for the animal sound…';animalDelay=setTimeout(()=>{animalDelay=null;playRecording()},900)};
+if(!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window)){if(status)status.textContent=a.name+'. Preparing animal sound…';animalDelay=setTimeout(()=>{animalDelay=null;playRecording()},1100);return}
+try{
+const u=new SpeechSynthesisUtterance(a.name);
+u.lang='en-IN';u.rate=.78;u.volume=1;
+let completed=false;
+const finish=()=>{if(completed)return;completed=true;afterName()};
+u.onend=finish;u.onerror=finish;
+if(status)status.textContent='🔊 '+a.name;
+window.speechSynthesis.speak(u);
+if(window.speechSynthesis.paused)window.speechSynthesis.resume();
+}catch(e){afterName()}
 }
 function renderCardFilters(){let cats=['Animals','Science','Geography','Fun Facts'];$('extraFilters').innerHTML='<div style="width:100%"><div class="controls">'+cats.map(c=>`<button class="btn ${cardCategory===c?'':'secondary'}" onclick="cardCategory='${c}';renderCardFilters()">${c}</button>`).join('')+'</div><div class="controls">'+['Easy','Medium','Hard'].map(t=>`<button class="btn ${cardTier===t?'':'secondary'}" onclick="cardTier='${t}';renderCardFilters()">${t}</button>`).join('')+'</div></div>';cardList=bloomPick(KNOWLEDGE_DECK.filter(c=>c.cat===cardCategory&&c.tier===cardTier),'knowledge:'+cardCategory+':'+cardTier,8,c=>c.q.trim().toLowerCase());cardIndex=0;renderKnowledge()}
 function renderKnowledge(){revealed=false;let c=cardList[cardIndex];if(!c){$('extraBody').innerHTML='<div class="learningbox"><h2>Nice thinking! 🌱</h2><p>You finished this short set. Tell someone one new thing you learned.</p><button class="btn" onclick="extraHome()">Back to activities</button></div>';$('extraFoot').textContent='Learning is more important than scores.';return}$('extraBody').innerHTML=`<p class="badge">Card ${cardIndex+1} of ${cardList.length}</p><button class="flipbutton" id="studyFlip" onclick="flipKnowledge()"><span class="quiet">QUESTION — Think first</span><div style="margin-top:15px">${c.q}</div><p class="quiet">Tap when you are ready to see the answer</p></button><div id="reflectArea"></div>`;$('extraFoot').textContent='Try answering aloud before revealing. It is okay not to know yet.'}
