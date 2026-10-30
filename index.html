@@ -219,9 +219,9 @@ header{position:sticky;top:0;z-index:30;background:#ffffffea;backdrop-filter:blu
 #childEditPanel label{display:block;font-weight:750;margin:8px 0 5px}
 #childEditPanel input{width:100%;max-width:340px;padding:11px;border:1px solid #bcbdd0;border-radius:10px}
 #childEditPanel .controls{margin-top:14px}
-</style></head><body><header><div class="brand">🌱 Bloom<span>Bud</span></div><div class="topright"><span class="pill">⭐ <span id="xp">0</span> XP</span><button class="btn secondary" id="soundToggle" onclick="toggleSound()">🔊</button></div></header><main><div class="parentbar" id="routineBar"><div><strong>🌿 Calm learning routine</strong><div><small id="routineText">A short learning session, then a real-world break.</small></div></div><button class="parent-entry" onclick="openParent()" aria-label="Open parent dashboard"><span class="parent-entry-icon">👨‍👩‍👧</span><span>Parent dashboard</span><span aria-hidden="true" class="parent-entry-arrow">→</span></button></div><section class="view active" id="dashboard"><div class="minimal-home">
+#ageGamesHeading{margin:14px 0 18px;padding:12px 16px;background:#f3efff;border-radius:16px;font-weight:800;color:#4c388e}.activity-tile[hidden],.review-link[hidden]{display:none!important}.skill-games:has(>button:not([hidden])){display:flex}.skill-games:has(>button[hidden]:first-child):has(>button[hidden]:last-child){display:none}</style></head><body><header><div class="brand">🌱 Bloom<span>Bud</span></div><div class="topright"><span class="pill">⭐ <span id="xp">0</span> XP</span><button class="btn secondary" id="soundToggle" onclick="toggleSound()">🔊</button></div></header><main><div class="parentbar" id="routineBar"><div><strong>🌿 Calm learning routine</strong><div><small id="routineText">A short learning session, then a real-world break.</small></div></div><button class="parent-entry" onclick="openParent()" aria-label="Open parent dashboard"><span class="parent-entry-icon">👨‍👩‍👧</span><span>Parent dashboard</span><span aria-hidden="true" class="parent-entry-arrow">→</span></button></div><section class="view active" id="dashboard"><div class="minimal-home">
 <div class="welcome"><div class="welcome-kicker"><span class="welcome-spark">✦</span> A LITTLE LEARNING, EVERY DAY</div><h1>Big curiosity starts <span>small.</span></h1><p>Choose an adventure and let your imagination grow.</p><div class="welcome-chips"><span>✨ Learn through play</span><span>🌿 At your own pace</span><span>🎯 Little wins matter</span></div></div>
-<div aria-label="Choose a learning activity" class="activity-tiles">
+<div id="ageGamesHeading" class="age-games-heading" role="status" aria-live="polite"></div><div aria-label="Choose a learning activity" class="activity-tiles">
 <button aria-label="Explore WordForge" class="activity-tile tile-word" onclick="selectActivity('word')"><span class="tile-art">🔤</span><span class="tile-name">Words</span><span class="tile-hint">Make &amp; discover</span><span class="tile-arrow" aria-hidden="true">→</span></button>
 <button aria-label="Explore PhonicsForge" class="activity-tile tile-phonics" onclick="selectActivity('phonics')"><span class="tile-art">🗣️</span><span class="tile-name">Sounds</span><span class="tile-hint">Listen &amp; learn</span><span class="tile-arrow" aria-hidden="true">→</span></button>
 <button aria-label="Explore Sound Safari" class="activity-tile tile-safari" onclick="selectActivity('safari')"><span class="tile-art">🐾</span><span class="tile-name">Animals</span><span class="tile-hint">Meet the wild</span><span class="tile-arrow" aria-hidden="true">→</span></button>
@@ -487,7 +487,26 @@ const persist=()=>{try{child.data=childSnapshot();children.selected=child.id;loc
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let parentOpen=false;
 function finishSession(reason){const a=cfg.activeSession;if(!a)return;cfg.sessions.unshift({...a,ended:Math.min(Date.now(),a.started+a.limit*60000),reason});cfg.sessions=cfg.sessions.slice(0,60);cfg.activeSession=null;persist()}
+const AGE_GAMES={
+early:['toddler','safari','phonics','draw','reviews'],
+middle:['word','phonics','safari','cards','code','chess','draw','reviews'],
+older:['word','phonics','safari','cards','code','chess','draw','reviews']
+};
+function updateAgeGames(){
+const age=Number.isInteger(child.age)?child.age:null;
+const band=age===null?(cfg.age==='3-5'?'early':cfg.age==='9+'?'older':'middle'):age<=5?'early':age<=8?'middle':'older';
+const allowed=AGE_GAMES[band];
+const names={early:'Little Explorer',middle:'Growing Learner',older:'Independent Explorer'};
+const heading=el('ageGamesHeading');
+if(heading)heading.textContent=child.name+' • '+(age===null?'Learning stage '+cfg.age:'Age '+age)+' • '+names[band]+' games';
+document.querySelectorAll('#dashboard [onclick^="selectActivity("]').forEach(button=>{
+const match=button.getAttribute('onclick').match(/selectActivity\('([^']+)'\)/);
+if(!match)return;
+button.hidden=!allowed.includes(match[1]);
+});
+}
 function showChildren(){
+updateAgeGames();
 const e=el('childPicker');e.innerHTML=children.list.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+(Number.isInteger(p.age)?' ('+p.age+' yrs)':'')+'</option>').join('');e.value=child.id;
 const band=Number.isInteger(child.age)?child.age<=5?'early':child.age<=8?'middle':'older':'unknown';
 el('childProfileCard').dataset.ageBand=band;
@@ -509,6 +528,7 @@ persist();stage();refreshBar();showChildren();cancelChildEdit();renderParent();
 window.selectChild=function(id){if(!parentOpen)return;const p=children.list.find(x=>x.id===id);if(!p||p===child)return;if(cfg.activeSession)finishSession('switched');cfg.stopped=true;persist();child=p;restoreChild(p);persist();cancelChildEdit();renderParent();stage();refreshBar()};
 window.addChild=function(){if(!parentOpen||children.list.length>=8)return;const name=prompt('Child name:');if(!name||!name.trim())return;const id='c'+Date.now().toString(36);children.list.push({id,name:name.trim().slice(0,24),age:null,data:{age:'3-5',limit:10,started:Date.now(),stopped:true,sessions:[],sessionSeq:0,activeSession:null,skills:{words:[],phonics:[],animals:[],facts:[],review:[]}}});selectChild(id)};
 window.renameChild=function(){if(!parentOpen)return;const name=prompt('Edit name for '+child.name+':',child.name);if(name===null)return;const clean=name.trim().slice(0,24);if(!clean){alert('Please enter a child name.');return}child.name=clean;persist();showChildren();refreshBar()};
+updateAgeGames();
 function renderSessionHistory(){const root=el('sessionHistory');if(!root)return;const current=cfg.activeSession?[cfg.activeSession]:[];const sessions=[...current,...cfg.sessions.slice(0,9)];root.innerHTML=sessions.length?sessions.map(x=>'<div class="session-history-item"><div><strong>Session #'+x.id+'</strong><small>'+new Date(x.started).toLocaleString()+' · '+x.limit+' min limit</small></div><span>'+(!x.ended?'Active':x.reason==='limit'?'Time completed':'Ended')+'</span></div>').join(''):'<p class="muted">No child sessions recorded yet. Start a supervised session to create one.</p>'}
 
 function record(type,value){if(cfg.stopped)return;const arr=cfg.skills[type];if(!arr)return;arr.push({value:String(value),date:new Date().toLocaleDateString('en-CA'),sessionId:cfg.activeSession?.id||null,childId:child.id});if(cfg.activeSession)cfg.activeSession.activities++;if(arr.length>300)arr.shift();persist();}
@@ -528,7 +548,7 @@ function renderParent(){showChildren();renderSessionHistory();renderLearningGuid
 function checkPin(){if(!cfg.pin){let p=prompt('Create a 4–8 digit parent PIN to protect settings:');if(!p||!/^[0-9]{4,8}$/.test(p)){alert('Please enter 4–8 digits.');return false}cfg.pin=p;persist();return true}let p=prompt('Enter parent PIN:');if(p!==cfg.pin){if(p!==null)alert('Incorrect PIN.');return false}return true}
 window.openParent=function(){if(!checkPin())return;parentOpen=true;el('stopScreen').classList.remove('show');document.querySelectorAll('main .view').forEach(v=>v.classList.remove('active'));el('parentView').classList.add('active');renderParent();};
 window.closeParent=function(){parentOpen=false;el('parentView').classList.remove('active');el('dashboard').classList.add('active');stage();checkLimit();};
-window.updateParentSetting=function(){cfg.age=el('ageSetting').value;cfg.limit=Number(el('limitSetting').value);persist();stage();refreshBar();};
+window.updateParentSetting=function(){cfg.age=el('ageSetting').value;cfg.limit=Number(el('limitSetting').value);persist();stage();refreshBar();updateAgeGames();};
 window.changeParentPin=function(){let p=el('pinSetting').value;if(!/^[0-9]{4,8}$/.test(p)){alert('Use 4–8 digits.');return}cfg.pin=p;el('pinSetting').value='';persist();alert('Parent PIN updated on this device.');};
 window.parentNewSession=function(){if(!parentOpen)return;if(cfg.activeSession)finishSession('restarted');cfg.sessionSeq++;cfg.started=Date.now();cfg.stopped=false;cfg.activeSession={id:cfg.sessionSeq,childId:child.id,started:cfg.started,limit:cfg.limit,activities:0};persist();el('stopScreen').classList.remove('show');window.closeParent();};
 window.showParentFromStop=window.openParent;
